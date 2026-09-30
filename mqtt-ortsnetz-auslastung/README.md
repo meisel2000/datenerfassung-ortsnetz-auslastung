@@ -82,8 +82,8 @@ Das Ziel-Repository steht unter `config.imageRepo` in [package.json](package.jso
 - Spannungswerte außerhalb von 150–300 V werden nicht übertragen.
 - Die Frequenz wird nur gesendet, wenn sie zwischen 45 und 55 Hz liegt.
 - Werte, die älter als `maxValueAgeMs` sind, gelten als fehlend; der Upload wird übersprungen.
-- Die PV-Prognose wird in Wh per MQTT von evcc empfangen und für die API in kWh umgerechnet.
-- Die installierte PV-Leistung wird mit jedem Upload übertragen. Ohne PV-Prognose-Topic wird `pv_forecast_kwh` als `0` übertragen.
+- Die PV-Prognose wird in Wh per MQTT von evcc empfangen, einmal täglich um 00:01 Uhr aktualisiert und für die API in kWh umgerechnet.
+- Die installierte PV-Leistung wird mit jedem Upload übertragen. `pv_forecast_kwh` wird erst übertragen, wenn eine positive PV-Prognose vorliegt; bis dahin fehlt das Feld im Payload.
 - Übertragungen erhalten eine Zeitüberschreitung von 10 Sekunden.
 - Meldet die API den Ampelstatus `yellow`, erscheint eine Warnung im Log.
 - Bei `Wert aus … nicht lesbar` Topic-Payload prüfen und ggf. `jsonKey` setzen.

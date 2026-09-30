@@ -30,6 +30,7 @@ const API_URL = 'https://www.ortsnetz-auslastung.de/v1/measurements';
 const VERSION = 'mqtt-0.3.0';
 
 const values = new Map();
+let pvForecastKwh = 0;
 
 function parsePayload(payload, jsonKey = CONFIG.jsonKey) {
     const text = payload.toString().trim();
@@ -61,13 +62,30 @@ function currentValue(topic) {
     return entry.value;
 }
 
+function schedulePvForecastUpdate() {
+    const now = new Date();
+    const nextUpdate = new Date(now);
+    nextUpdate.setHours(24, 1, 0, 0);
+
+    setTimeout(() => {
+        const forecast = currentValue(CONFIG.solarForecastTopic);
+
+        if (Number.isFinite(forecast) && forecast >= 0) {
+            pvForecastKwh = forecast / 1000;
+            uploadMeasurement();
+        } else {
+            console.warn('Ortsnetz-Auslastung: keine gültige PV-Prognose um 00:01 Uhr');
+        }
+
+        schedulePvForecastUpdate();
+    }, nextUpdate.getTime() - now.getTime());
+}
+
 async function uploadMeasurement() {
     const l1 = currentValue(CONFIG.l1Topic);
     const l2 = currentValue(CONFIG.l2Topic);
     const l3 = currentValue(CONFIG.l3Topic);
     const frequency = CONFIG.frequencyTopic ? currentValue(CONFIG.frequencyTopic) : null;
-    const pvForecast = CONFIG.solarForecastTopic ? currentValue(CONFIG.solarForecastTopic) : null;
-
     // Do not report missing or implausible measurements.
     if (![l1, l2, l3].every((value) => Number.isFinite(value) && value >= 150 && value <= 300)) {
         console.warn('Ortsnetz-Auslastung: ungültige Spannung; Upload übersprungen');
@@ -83,9 +101,12 @@ async function uploadMeasurement() {
         l3_v: l3,
         integration_version: VERSION,
         smartmeter_model: CONFIG.smartmeterModel,
-        pv_forecast_kwh: pvForecast/1000, //kWh
         plant_capacity_kwp: CONFIG.plant_capacity_kwp,
     };
+
+    if (pvForecastKwh > 0) {
+        payload.pv_forecast_kwh = pvForecastKwh;
+    }
 
     if (Number.isFinite(frequency) && frequency >= 45 && frequency <= 55) {
         payload.grid_frequency_hz = frequency;
@@ -158,3 +179,7 @@ client.on('message', (topic, payload) => {
 
 // Alle fünf Minuten
 setInterval(uploadMeasurement, CONFIG.uploadIntervalMs);
+
+if (CONFIG.solarForecastTopic) {
+    schedulePvForecastUpdate();
+}
