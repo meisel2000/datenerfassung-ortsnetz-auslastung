@@ -1,6 +1,6 @@
 {
   "name": "mqtt-ortsnetz-auslastung",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "Liest L1-, L2-, L3-Spannung und Netzfrequenz per MQTT und überträgt sie an die Ortsnetz-Auslastung-API.",
   "main": "ortsnetz-auslastung.js",
